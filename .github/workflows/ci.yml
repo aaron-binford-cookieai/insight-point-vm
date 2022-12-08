@@ -33,7 +33,8 @@ jobs:
           sed "s/<Version><\/Version>/<Version>$(date +%Y%m%d)<\/Version>/g" veza/veza_insight_point.ovf > ova_out/veza_insight_point.ovf
           echo $(openssl sha1 ova_out/veza_insight_point.ovf) > ova_out/veza_insight_point.mf
           echo $(openssl sha1 ova_out/veza_insight_point.vmdk) >> ova_out/veza_insight_point.mf
-          tar cf ova_out/veza_insight_point.ova ova_out/veza_insight_point.vmdk ova_out/veza_insight_point.mf ova_out/veza_insight_point.ovf
+          cd ova_out
+          tar cf veza_insight_point.ova veza_insight_point.vmdk veza_insight_point.mf veza_insight_point.ovf
 
       - name: Upload OVA
         uses: actions/upload-artifact@v3
