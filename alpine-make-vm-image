@@ -360,7 +360,7 @@ done
 : ${FS_SKEL_CHOWN:=}
 : ${FS_SKEL_DIR:=}
 : ${IMAGE_FORMAT:=}
-: ${IMAGE_SIZE:="2G"}
+: ${IMAGE_SIZE:="4G"}
 : ${INITFS_FEATURES:="scsi virtio"}
 : ${KERNEL_FLAVOR:="virt"}
 : ${KEYS_DIR:="/etc/apk/keys"}

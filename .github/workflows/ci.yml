@@ -18,10 +18,25 @@ jobs:
         run: |
           sudo ./alpine-make-vm-image \
               --image-format qcow2 \
-              --image-size 2G \
-              --repositories-file example/repositories \
-              --packages "$(cat example/packages)" \
-              --fs-skel-dir example/rootfs \
+              --image-size 4G \
+              --repositories-file veza/repositories \
+              --packages "$(cat veza/packages)" \
+              --fs-skel-dir veza/rootfs \
               --fs-skel-chown root:root \
               --script-chroot \
-              alpine-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
+              veza_insight_point.qcow2 -- ./veza/configure.sh
+
+      - name: Convert image to OVA
+        run: |
+          mkdir ova_out
+          qemu-img convert -p -f qcow2 -O vmdk veza_insight_point.qcow2 ova_out/veza_insight_point.vmdk
+          sed "s/<Version><\/Version>/<Version>$(date +%Y%m%d)<\/Version>/g" veza/veza_insight_point.ovf > ova_out/veza_insight_point.ovf
+          echo $(openssl sha1 ova_out/veza_insight_point.ovf) > ova_out/veza_insight_point.mf
+          echo $(openssl sha1 ova_out/veza_insight_point.vmdk) >> ova_out/veza_insight_point.mf
+          tar cf veza_insight_point.ova veza_insight_point.vmdk veza_insight_point.mf veza_insight_point.ovf
+
+      - name: Upload OVA
+        uses: actions/upload-artifact@v3
+        with:
+          name: 'OVA'
+          path: '*.ova'

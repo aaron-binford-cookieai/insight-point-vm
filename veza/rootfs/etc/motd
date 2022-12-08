@@ -1,0 +1,7 @@
+Welcome to Veza Insight Point!
+
+This virtual machine is based on a minimal Alpine Linux
+install and is preconfigured to host your Veza Insight Point
+Docker container.
+
+To get started, login and run the following command: setup-veza

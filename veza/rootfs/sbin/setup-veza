@@ -1,0 +1,85 @@
+#! /bin/ash
+
+# check for force flag to redeploy Insight Point
+while getopts 'f' OPTION; do
+  case "$OPTION" in
+    f)
+      echo "$(date +%s): -f detected; redeploying Insight Point" | tee -a /var/log/veza_insight_point.log
+      rm /opt/veza.lock
+      ;;
+  esac
+done
+
+#
+# BEGIN OS configuration
+#
+echo "performing initial system configuration"
+# set timezone - important for time sync with Veza platform
+setup-timezone
+
+# set hostname for the virtual machine
+setup-hostname ${HOSTNAMEOPTS} && [ -z "$SSH_CONNECTION" ] && rc-service hostname --quiet restart
+
+# setup eth0 interface
+[ -z "$SSH_CONNECTION" ] && rst_if=1
+if [ -n "$INTERFACESOPTS" ]; then
+	printf "$INTERFACESOPTS" | setup-eth0 -i ${rst_if:+-r}
+else
+	setup-eth0 ${quick:+-a} ${rst_if:+-r}
+fi
+
+# setup up dns if no dhcp was configured
+grep '^iface.*dhcp' $ROOT/etc/network/interfaces > /dev/null ||\
+	setup-dns ${DNSOPTS}
+
+# set root password
+while ! $MOCK passwd ; do
+  echo "Please retry."
+done
+
+# update /etc/hosts - after we have got dhcp address
+# Get default fully qualified domain name from *first* domain
+# given on *last* search or domain statement.
+_dn=$(sed -n \
+-e '/^domain[[:space:]][[:space:]]*/{s///;s/\([^[:space:]]*\).*$/\1/;h;}' \
+-e '/^search[[:space:]][[:space:]]*/{s///;s/\([^[:space:]]*\).*$/\1/;h;}' \
+-e '${g;p;}' "$ROOT"/etc/resolv.conf 2>/dev/null)
+
+_hn=$(hostname)
+_hn=${_hn%%.*}
+#
+# END OS configuration
+#
+
+# check if the Insight Point has already been configured
+echo "checking Veza lock file" | tee -a /var/log/veza_insight_point.log
+if test -f /opt/veza.lock;
+then
+  echo "$(date +%s): Insight Point already configured; use -f to redeploy" | tee -a /var/log/veza_insight_point.log
+  exit 1
+fi
+
+# check if docker is running before attempting to deploy the container
+echo "checking Docker status"
+if service docker status | grep "status: started";
+then
+  echo "Docker started; provisioning Insight Point"
+  echo "Initial image pull may take a moment; please wait"
+  # prompt for Veza FQDN
+  read -p "Enter Veza FQDN:" VEZA_FQDN
+  # prompt for the Veza Insight Point registration token
+  read -n 6476 -p "Enter Insight Point Registration Key: " REGISTER_KEY
+
+  # run container
+  docker run -d --restart unless-stopped \
+  -e COOKIEAI_CP_ADDR="$VEZA_FQDN:443"\
+  -e DP_REGISTER_KEY="$REGISTER_KEY" \
+  public.ecr.aws/b1u0k2e1/insight_point:latest
+
+else
+  echo "$(date +%s): Docker not running; exiting" | tee -a /var/log/veza_insight_point.log
+  exit 1
+fi
+
+# write a lock file to prevent re-running without a -f flag
+echo $(date +%s) | tee /opt/veza.lock

@@ -1,0 +1,12 @@
+chrony
+doas
+doas-sudo-shim
+less
+logrotate
+openssh
+ssmtp
+docker
+openrc
+open-vm-tools
+open-vm-tools-guestinfo
+open-vm-tools-deploypkg
